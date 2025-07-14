@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dialogue Cutscene Maker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .cutscene-editor {
+      background: #fff;
+      padding: 20px;
+      max-width: 800px;
+      width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #1a73e8;
+    }
+    #dialogue-list {
+      margin-top: 20px;
+    }
+    .dialogue-line {
+      background: #fff;
+      padding: 6px 10px;
+      margin-bottom: 5px;
+      border-left: 5px solid #1a73e8;
+      cursor: grab;
+      transition: background 0.2s;
+    }
+    .dialogue-line:hover {
+      background: #eef;
+    }
+    .dialogue-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    input, textarea {
+      padding: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    button {
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background: #1a73e8;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #1557b0;
+    }
+  </style>
+</head>
+<body>
+  <div class="cutscene-editor">
+    <h2>Dialogue Cutscene Maker</h2>
+
+    <div id="dialogue-list"></div>
+
+    <div class="dialogue-inputs">
+      <input type="text" id="speaker" placeholder="Speaker name">
+      <textarea id="dialogue" placeholder="Dialogue text"></textarea>
+      <input type="number" id="duration" placeholder="Duration (seconds)" min="1">
+      <button id="add-dialogue">➕ Add Dialogue Line</button>
+      <button id="preview-cutscene">▶️ Play Cutscene</button>
+      <button id="export-cutscene">💾 Export to JSON</button>
+    </div>
+  </div>
+
+  <script>
+    let cutsceneData = [];
+
+    function renderDialogueList() {
+      const container = document.getElementById('dialogue-list');
+      container.innerHTML = "";
+      cutsceneData.forEach((line, index) => {
+        const div = document.createElement('div');
+        div.classList.add('dialogue-line');
+        div.setAttribute('draggable', 'true');
+        div.dataset.index = index;
+        div.textContent = `${index + 1}. ${line.speaker}: "${line.text}" (${line.duration}s)`;
+        container.appendChild(div);
+      });
+    }
+
+    document.getElementById('add-dialogue').addEventListener('click', () => {
+      const speaker = document.getElementById('speaker').value.trim();
+      const text = document.getElementById('dialogue').value.trim();
+      const duration = parseFloat(document.getElementById('duration').value.trim()) || 2;
+
+      if (!speaker || !text) return alert("Please fill out speaker and dialogue.");
+
+      cutsceneData.push({ speaker, text, duration });
+      renderDialogueList();
+
+      document.getElementById('speaker').value = "";
+      document.getElementById('dialogue').value = "";
+      document.getElementById('duration').value = "";
+    });
+
+    document.getElementById('preview-cutscene').addEventListener('click', async () => {
+      for (const line of cutsceneData) {
+        alert(`${line.speaker}: "${line.text}"`);
+        await new Promise(r => setTimeout(r, line.duration * 1000));
+      }
+    });
+
+    document.getElementById('export-cutscene').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(cutsceneData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "cutscene.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    let draggedIndex;
+    document.addEventListener('dragstart', e => {
+      if (e.target.classList.contains('dialogue-line')) {
+        draggedIndex = e.target.dataset.index;
+      }
+    });
+    document.addEventListener('dragover', e => {
+      if (e.target.classList.contains('dialogue-line')) {
+        e.preventDefault();
+      }
+    });
+    document.addEventListener('drop', e => {
+      if (e.target.classList.contains('dialogue-line')) {
+        const dropIndex = e.target.dataset.index;
+        const draggedItem = cutsceneData.splice(draggedIndex, 1)[0];
+        cutsceneData.splice(dropIndex, 0, draggedItem);
+        renderDialogueList();
+      }
+    });
+  </script>
+</body>
+</html>
