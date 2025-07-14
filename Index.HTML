@@ -2,12 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Level Maker v2.0</title>
+  <title>Playable Level Maker</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #f0f2f5;
-      margin: 0;
       padding: 20px;
       display: flex;
       flex-direction: column;
@@ -18,8 +17,8 @@
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      width: 100%;
       max-width: 850px;
+      width: 100%;
     }
     h1 {
       text-align: center;
@@ -38,39 +37,36 @@
       height: 30px;
       border: 2px solid transparent;
       cursor: pointer;
-      transition: transform 0.2s;
     }
     .tile-option.selected {
       border-color: #1a73e8;
     }
-    .tile-option:hover {
-      transform: scale(1.1);
-    }
-    .grid-container {
+    .grid {
+      position: relative;
       display: grid;
       grid-template-columns: repeat(20, 30px);
       grid-template-rows: repeat(20, 30px);
       gap: 2px;
       margin: 0 auto 20px;
+      background: #ddd;
     }
     .cell {
       width: 30px;
       height: 30px;
       background: #e8e8e8;
-      border: 1px solid #ddd;
-      cursor: pointer;
-      transition: background 0.2s;
+      border: 1px solid #ccc;
+      position: relative;
     }
-    .cell:hover {
-      opacity: 0.8;
-    }
-    .controls {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
+    .player {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background: #2196f3;
+      z-index: 10;
+      border-radius: 4px;
     }
     button {
+      margin: 5px;
       padding: 10px 16px;
       border: none;
       border-radius: 5px;
@@ -82,65 +78,55 @@
     button:hover {
       background: #1557b0;
     }
-    #saveBtn { background: #34a853; }
-    #saveBtn:hover { background: #2d8a46; }
-    #playBtn { background: #fbbc05; color: black; }
-    #playBtn:hover { background: #e0a800; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Level Maker v2.0</h1>
-
+    <h1>Playable Level Maker</h1>
     <div class="tile-selector">
       <div class="tile-option selected" data-type="wall" style="background:#424242;"></div>
       <div class="tile-option" data-type="floor" style="background:#8d6e63;"></div>
       <div class="tile-option" data-type="player" style="background:#2196f3;"></div>
-      <div class="tile-option" data-type="enemy" style="background:#f44336;"></div>
-      <div class="tile-option" data-type="start" style="background:#4caf50;"></div>
-      <div class="tile-option" data-type="end" style="background:#e91e63;"></div>
     </div>
-
-    <div class="grid-container" id="grid"></div>
-
-    <div class="controls">
-      <button id="saveBtn">💾 Save Level</button>
-      <button id="playBtn">▶️ Playtest</button>
-    </div>
+    <div class="grid" id="grid"></div>
+    <button id="playBtn">▶️ Start Playtest</button>
+    <button id="saveBtn">💾 Save Level</button>
   </div>
 
   <script>
     const gridSize = 20;
+    const tileSize = 30;
     const grid = document.getElementById('grid');
+    const gridData = Array(gridSize).fill().map(() => Array(gridSize).fill('empty'));
     const tileOptions = document.querySelectorAll('.tile-option');
     let selectedTile = 'wall';
-    const gridData = Array(gridSize).fill().map(() => Array(gridSize).fill('empty'));
+    let playerPos = null;
 
-    function getTileColor(type) {
+    // Create grid cells
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        cell.addEventListener('click', () => {
+          gridData[r][c] = selectedTile;
+          cell.style.background = getColor(selectedTile);
+          if (selectedTile === 'player') {
+            playerPos = { row: r, col: c };
+          }
+        });
+        grid.appendChild(cell);
+      }
+    }
+
+    function getColor(type) {
       return {
         wall: '#424242',
         floor: '#8d6e63',
         player: '#2196f3',
-        enemy: '#f44336',
-        start: '#4caf50',
-        end: '#e91e63',
-        empty: '#e8e8e8',
-        trail: '#ffeb3b'
+        empty: '#e8e8e8'
       }[type] || '#e8e8e8';
-    }
-
-    for (let i = 0; i < gridSize * gridSize; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      const row = Math.floor(i / gridSize);
-      const col = i % gridSize;
-
-      cell.addEventListener('click', () => {
-        gridData[row][col] = selectedTile;
-        cell.style.background = getTileColor(selectedTile);
-      });
-
-      grid.appendChild(cell);
     }
 
     tileOptions.forEach(option => {
@@ -151,6 +137,7 @@
       });
     });
 
+    // Save JSON
     document.getElementById('saveBtn').addEventListener('click', () => {
       const dataStr = JSON.stringify(gridData);
       const blob = new Blob([dataStr], {type: 'application/json'});
@@ -162,36 +149,68 @@
       URL.revokeObjectURL(url);
     });
 
+    // Playtest logic
     document.getElementById('playBtn').addEventListener('click', () => {
-      let startPos = null;
-      let endPos = null;
+      if (!playerPos) return alert("Place a player tile on the grid to begin.");
 
-      for (let r = 0; r < gridSize; r++) {
-        for (let c = 0; c < gridSize; c++) {
-          if (gridData[r][c] === 'start') startPos = {row: r, col: c};
-          if (gridData[r][c] === 'end') endPos = {row: r, col: c};
-        }
+      const player = document.createElement('div');
+      player.className = 'player';
+      grid.appendChild(player);
+
+      let x = playerPos.col * (tileSize + 2);
+      let y = playerPos.row * (tileSize + 2);
+      let vx = 0;
+      let vy = 0;
+      let jumping = false;
+
+      function draw() {
+        player.style.left = x + 'px';
+        player.style.top = y + 'px';
       }
 
-      if (!startPos || !endPos) {
-        alert("Place both a green start flag and a red end flag to playtest.");
-        return;
+      function collide(x, y) {
+        const row = Math.floor(y / (tileSize + 2));
+        const col = Math.floor(x / (tileSize + 2));
+        return (
+          row < 0 || row >= gridSize ||
+          col < 0 || col >= gridSize ||
+          gridData[row][col] === 'wall'
+        );
       }
 
-      let current = {...startPos};
-      const interval = setInterval(() => {
-        const index = current.row * gridSize + current.col;
-        grid.children[index].style.background = getTileColor('trail');
-
-        if (current.row < endPos.row) current.row++;
-        else if (current.row > endPos.row) current.row--;
-        else if (current.col < endPos.col) current.col++;
-        else if (current.col > endPos.col) current.col--;
-        else {
-          clearInterval(interval);
-          alert("Playtest complete!");
+      document.addEventListener('keydown', e => {
+        if (e.key === 'a') vx = -2;
+        if (e.key === 'd') vx = 2;
+        if (e.key === 'w' && !jumping) {
+          vy = -5;
+          jumping = true;
         }
-      }, 200);
+      });
+      document.addEventListener('keyup', e => {
+        if (e.key === 'a' || e.key === 'd') vx = 0;
+      });
+
+      function loop() {
+        // Horizontal move
+        let nextX = x + vx;
+        if (!collide(nextX, y)) x = nextX;
+
+        // Gravity + Jump
+        vy += 0.2;
+        let nextY = y + vy;
+        if (!collide(x, nextY)) {
+          y = nextY;
+        } else {
+          vy = 0;
+          jumping = false;
+        }
+
+        draw();
+        requestAnimationFrame(loop);
+      }
+
+      draw();
+      loop();
     });
   </script>
 </body>
