@@ -2,216 +2,71 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Playable Level Maker</title>
+  <title>Level Maker</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f2f5;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .container {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      max-width: 850px;
-      width: 100%;
-    }
-    h1 {
-      text-align: center;
-      color: #1a73e8;
-      margin-bottom: 20px;
-    }
-    .tile-selector {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-bottom: 15px;
-    }
-    .tile-option {
-      width: 30px;
-      height: 30px;
-      border: 2px solid transparent;
-      cursor: pointer;
-    }
-    .tile-option.selected {
-      border-color: #1a73e8;
-    }
-    .grid {
-      position: relative;
-      display: grid;
-      grid-template-columns: repeat(20, 30px);
-      grid-template-rows: repeat(20, 30px);
-      gap: 2px;
-      margin: 0 auto 20px;
-      background: #ddd;
-    }
-    .cell {
-      width: 30px;
-      height: 30px;
-      background: #e8e8e8;
-      border: 1px solid #ccc;
-      position: relative;
-    }
-    .player {
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      background: #2196f3;
-      z-index: 10;
-      border-radius: 4px;
-    }
-    button {
-      margin: 5px;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 5px;
-      background: #1a73e8;
-      color: white;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background: #1557b0;
-    }
+    body { font-family: sans-serif; background: #f0f0f0; padding: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(10, 30px); gap: 2px; }
+    .cell { width: 30px; height: 30px; background: #ddd; border: 1px solid #aaa; cursor: pointer; }
+    .toolbar { margin-bottom: 10px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Playable Level Maker</h1>
-    <div class="tile-selector">
-      <div class="tile-option selected" data-type="wall" style="background:#424242;"></div>
-      <div class="tile-option" data-type="floor" style="background:#8d6e63;"></div>
-      <div class="tile-option" data-type="player" style="background:#2196f3;"></div>
-    </div>
-    <div class="grid" id="grid"></div>
-    <button id="playBtn">▶️ Start Playtest</button>
-    <button id="saveBtn">💾 Save Level</button>
+  <h2>Level Maker</h2>
+  <div class="toolbar">
+    <button onclick="selectTile('wall')">Wall</button>
+    <button onclick="selectTile('floor')">Floor</button>
+    <button onclick="selectTile('player')">Player</button>
+    <button onclick="saveLevel()">💾 Export JSON</button>
+    <input type="file" accept=".json" onchange="loadLevel(event)">
   </div>
+  <div class="grid" id="grid"></div>
 
   <script>
-    const gridSize = 20;
-    const tileSize = 30;
+    const gridSize = 10;
     const grid = document.getElementById('grid');
-    const gridData = Array(gridSize).fill().map(() => Array(gridSize).fill('empty'));
-    const tileOptions = document.querySelectorAll('.tile-option');
     let selectedTile = 'wall';
-    let playerPos = null;
+    const gridData = Array(gridSize).fill().map(() => Array(gridSize).fill('empty'));
 
-    // Create grid cells
+    function selectTile(type) { selectedTile = type; }
+
     for (let r = 0; r < gridSize; r++) {
       for (let c = 0; c < gridSize; c++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
-        cell.dataset.row = r;
-        cell.dataset.col = c;
-        cell.addEventListener('click', () => {
+        cell.onclick = () => {
           gridData[r][c] = selectedTile;
-          cell.style.background = getColor(selectedTile);
-          if (selectedTile === 'player') {
-            playerPos = { row: r, col: c };
-          }
-        });
+          cell.style.background = { wall: '#333', floor: '#bbb', player: '#2196f3', empty: '#ddd' }[selectedTile];
+        };
         grid.appendChild(cell);
       }
     }
 
-    function getColor(type) {
-      return {
-        wall: '#424242',
-        floor: '#8d6e63',
-        player: '#2196f3',
-        empty: '#e8e8e8'
-      }[type] || '#e8e8e8';
-    }
-
-    tileOptions.forEach(option => {
-      option.addEventListener('click', () => {
-        tileOptions.forEach(o => o.classList.remove('selected'));
-        option.classList.add('selected');
-        selectedTile = option.dataset.type;
-      });
-    });
-
-    // Save JSON
-    document.getElementById('saveBtn').addEventListener('click', () => {
-      const dataStr = JSON.stringify(gridData);
-      const blob = new Blob([dataStr], {type: 'application/json'});
+    function saveLevel() {
+      const blob = new Blob([JSON.stringify(gridData)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'level.json';
       a.click();
       URL.revokeObjectURL(url);
-    });
+    }
 
-    // Playtest logic
-    document.getElementById('playBtn').addEventListener('click', () => {
-      if (!playerPos) return alert("Place a player tile on the grid to begin.");
-
-      const player = document.createElement('div');
-      player.className = 'player';
-      grid.appendChild(player);
-
-      let x = playerPos.col * (tileSize + 2);
-      let y = playerPos.row * (tileSize + 2);
-      let vx = 0;
-      let vy = 0;
-      let jumping = false;
-
-      function draw() {
-        player.style.left = x + 'px';
-        player.style.top = y + 'px';
-      }
-
-      function collide(x, y) {
-        const row = Math.floor(y / (tileSize + 2));
-        const col = Math.floor(x / (tileSize + 2));
-        return (
-          row < 0 || row >= gridSize ||
-          col < 0 || col >= gridSize ||
-          gridData[row][col] === 'wall'
-        );
-      }
-
-      document.addEventListener('keydown', e => {
-        if (e.key === 'a') vx = -2;
-        if (e.key === 'd') vx = 2;
-        if (e.key === 'w' && !jumping) {
-          vy = -5;
-          jumping = true;
+    function loadLevel(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const data = JSON.parse(reader.result);
+        for (let r = 0; r < gridSize; r++) {
+          for (let c = 0; c < gridSize; c++) {
+            gridData[r][c] = data[r][c] || 'empty';
+            const i = r * gridSize + c;
+            grid.children[i].style.background = { wall: '#333', floor: '#bbb', player: '#2196f3', empty: '#ddd' }[gridData[r][c]];
+          }
         }
-      });
-      document.addEventListener('keyup', e => {
-        if (e.key === 'a' || e.key === 'd') vx = 0;
-      });
-
-      function loop() {
-        // Horizontal move
-        let nextX = x + vx;
-        if (!collide(nextX, y)) x = nextX;
-
-        // Gravity + Jump
-        vy += 0.2;
-        let nextY = y + vy;
-        if (!collide(x, nextY)) {
-          y = nextY;
-        } else {
-          vy = 0;
-          jumping = false;
-        }
-
-        draw();
-        requestAnimationFrame(loop);
-      }
-
-      draw();
-      loop();
-    });
+      };
+      reader.readAsText(file);
+    }
   </script>
 </body>
 </html>
