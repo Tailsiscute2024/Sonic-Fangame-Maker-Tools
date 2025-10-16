@@ -7,7 +7,7 @@ If you want Open-Source Clickteam Fusion 2.5 files, i will upload them, but for 
 # Help Wanted
 I am looking for a tool to help build this project, any help will be admired
 
-## 🚨 Announcement: Next Project Teaser! 🚨
+## Announcement: Next Project Teaser!
 
 That’s right! The creator of Sonic Fangame Maker is excited to announce the upcoming project: **Kirby Fangame Maker**!  
 Stay tuned as we bring more creative tools and engine features—this time inspired by the world of Kirby and beyond.
@@ -18,6 +18,6 @@ Thank you for supporting the project and for being part of this amazing fangame 
 ---
 
 Want to follow development or contribute?  
-⭐ Star this repo, open issues with your ideas, and join the discussion!
+Star this repo, open issues with your ideas, and join the discussion!
 
 ---
